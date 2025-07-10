@@ -27,7 +27,8 @@ const productQuestionRoutes = require('./productQuestion.route');
 const dashboardRoutes = require('./dashboard.route')
 const authRouters = require('./auth.route')
 const systemSettingRoutes = require('./systemSetting.routes');
-
+const skuRoutes = require("./sku.route")
+router.use('/sku', skuRoutes); 
 router.use('/system-settings', systemSettingRoutes);
 router.use('/', orderRoutes);  
 router.use('/', authRouters); 

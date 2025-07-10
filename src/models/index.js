@@ -62,7 +62,7 @@ const Cart = require("./cart");
 const CartItem = require("./cartitem");
 
 const ProductVariant = require("./productvariant");
-
+const StockLog = require("./StockLog")
 const Brand = require("./brandModel");
 const Sku = require("./skuModel");
 const ProductMedia = require("./productMediaModel");
@@ -109,7 +109,18 @@ RolePermission.belongsTo(Subject, {
   foreignKey: 'subjectId',
   as: 'subject'
 });
+//
 
+StockLog.belongsTo(Sku, {
+  foreignKey: 'skuId',
+  as: 'sku'
+});
+
+Sku.hasMany(StockLog, {
+  foreignKey: 'skuId',
+  as: 'logs'
+});
+StockLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 //
 NotificationUser.belongsTo(Notification, { foreignKey: "notificationId" });
 NotificationUser.belongsTo(User, { foreignKey: "userId" });
@@ -596,5 +607,6 @@ SystemSetting,
   RolePermission,
   Action,
   Subject,
+  StockLog,
   sequelize: connection,
 };
