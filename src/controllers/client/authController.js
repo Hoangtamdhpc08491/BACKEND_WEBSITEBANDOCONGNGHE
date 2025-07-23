@@ -5,7 +5,7 @@ const { OAuth2Client } = require("google-auth-library");
 const axios = require("axios");
 
 const sendEmail = require("../../utils/sendEmail");
-const { User, Role, UserRole, UserToken } = require("../../models");
+const { User, Role, UserRole, UserToken, RolePermission, Action, Subject } = require("../../models");
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret";
 const BASE_URL = process.env.BASE_URL || "http://localhost:9999";
@@ -1198,15 +1198,18 @@ class AuthController {
 
   static async getUserInfo(req, res) {
     try {
-      const token = req.headers.authorization?.split(" ")[1];
-
+      // 1) Lấy token từ header
+      const token = req.headers.authorization?.split(' ')[1];
       if (!token) {
-        return res.status(401).json({ message: "Không có token xác thực!" });
+        return res.status(401).json({ message: "Không có token!" });
       }
 
+      // 2) Giải mã token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
 
-      const user = await User.findByPk(decoded.id, {
+      // 3) Lấy user + roles + rolePermissions + actions + subjects
+      const user = await User.findByPk(userId, {
         attributes: [
           "id",
           "fullName",
@@ -1215,19 +1218,36 @@ class AuthController {
           "gender",
           "dateOfBirth",
           "avatarUrl",
-          "password",
           "provider",
+          "status",
+          "lastLoginAt",
         ],
         include: [
           {
             model: UserToken,
             as: "UserTokens",
-
             where: { type: "lock" },
             required: false,
             limit: 1,
             order: [["createdAt", "DESC"]],
             attributes: ["lockedUntil"],
+          },
+          {
+            model: Role,
+            as: "roles",
+            attributes: ["id", "name", "description", "canAccess"],
+            through: { attributes: [] },
+            include: [
+              {
+                model: RolePermission,
+                as: "rolePermissions",
+                attributes: ["id", "roleId", "actionId", "subjectId"],
+                include: [
+                  { model: Action, as: "action", attributes: ["key"] },
+                  { model: Subject, as: "subject", attributes: ["key"] },
+                ],
+              },
+            ],
           },
         ],
       });
@@ -1236,39 +1256,77 @@ class AuthController {
         return res.status(404).json({ message: "Người dùng không tồn tại!" });
       }
 
-      const userResponse = user.toJSON();
-      if (userResponse.dateOfBirth) {
-        const [year, month, day] = userResponse.dateOfBirth.split("-");
-        userResponse.birthDate = {
-          day: day || "",
-          month: month || "",
-          year: year || "",
-        };
+      // 4) Convert về JSON
+      const userJson = user.toJSON();
+
+      // 5) Format birthDate
+      if (userJson.dateOfBirth) {
+        const [year, month, day] = userJson.dateOfBirth.split("-");
+        userJson.birthDate = { day: day || "", month: month || "", year: year || "" };
       } else {
-        userResponse.birthDate = { day: "", month: "", year: "" };
+        userJson.birthDate = { day: "", month: "", year: "" };
       }
-      userResponse.hasPassword = !!userResponse.password;
-      delete userResponse.password;
-      delete userResponse.dateOfBirth;
-      userResponse.lockedUntil = userResponse.tokens?.[0]?.lockedUntil || null;
-      delete userResponse.tokens;
+      delete userJson.dateOfBirth;
 
-      res.status(200).json({ user: userResponse });
+      userJson.hasPassword = !!userJson.password;
+      delete userJson.password;
+
+      userJson.lockedUntil = userJson.UserTokens?.[0]?.lockedUntil || null;
+      delete userJson.UserTokens;
+
+      // 6) Build roles
+      const roles = (userJson.roles || []).map(r => ({
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        canAccess: r.canAccess,
+      }));
+
+      // 7) Build permissions
+      const isAdmin = roles.some(r => r.id === 1);
+
+      let permissions = [];
+      if (isAdmin) {
+        permissions = [{ action: "manage", subject: "all" }];
+      } else {
+        (userJson.roles || []).forEach(role => {
+          (role.rolePermissions || []).forEach(rp => {
+            if (rp.action && rp.subject) {
+              permissions.push({
+                action: rp.action.key,
+                subject: rp.subject.key,
+              });
+            }
+          });
+        });
+      }
+
+      // 8) Kết quả trả về
+      const userResponse = {
+        id: userJson.id,
+        email: userJson.email,
+        fullName: userJson.fullName,
+        phone: userJson.phone,
+        gender: userJson.gender,
+        avatarUrl: userJson.avatarUrl,
+        provider: userJson.provider,
+        status: userJson.status,
+        lastLoginAt: userJson.lastLoginAt,
+        birthDate: userJson.birthDate,
+        hasPassword: userJson.hasPassword,
+        lockedUntil: userJson.lockedUntil,
+        roles,
+        permissions,
+      };
+
+      return res.status(200).json({ user: userResponse });
+
     } catch (err) {
-      console.error("Lỗi khi lấy thông tin người dùng:", err.name, err.message);
-
-      if (
-        err.name === "JsonWebTokenError" ||
-        err.name === "TokenExpiredError"
-      ) {
-        return res
-          .status(401)
-          .json({ message: "Token không hợp lệ hoặc đã hết hạn!" });
+      console.error("GetUserInfo error:", err.name, err.message);
+      if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+        return res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn!" });
       }
-
-      res.status(500).json({
-        message: "Đã xảy ra lỗi máy chủ khi cố gắng lấy thông tin người dùng.",
-      });
+      return res.status(500).json({ message: "Lỗi server khi lấy thông tin user." });
     }
   }
 

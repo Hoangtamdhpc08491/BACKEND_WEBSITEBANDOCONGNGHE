@@ -236,6 +236,11 @@ static async update(req, res) {
       return res.status(400).json({ message: "Dữ liệu sản phẩm không hợp lệ (JSON lỗi)" });
     }
 
+    // Lấy giá trị cũ để audit
+    const product = await Product.findOne({ where: { slug: slugParam } });
+    if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    req.auditOldValue = product.toJSON(); // <-- Gán oldValue cho middleware
+
     const {
       name,
       description,
@@ -253,9 +258,6 @@ static async update(req, res) {
       infoContent = "",
       specs = [],
     } = parsedProduct;
-
-    const product = await Product.findOne({ where: { slug: slugParam } });
-    if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
 
     const productId = product.id;
 
@@ -413,7 +415,9 @@ const finalBadgeImg     = uploadedBadge?.path || badgeImage || product.badgeImag
     }
 
     await t.commit();
-    return res.json({ message: "Cập nhật sản phẩm thành công", data: product });
+    // Lấy lại giá trị mới nhất sau update để middleware lấy đúng newValue
+    const updatedProduct = await Product.findByPk(productId);
+    res.json({ message: "Cập nhật sản phẩm thành công", data: updatedProduct });
 
   } catch (error) {
     await t.rollback();
@@ -560,7 +564,7 @@ const finalBadgeImg     = uploadedBadge?.path || badgeImage || product.badgeImag
       const product = await Product.findByPk(id);
       if (!product)
         return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
-
+      req.auditOldValue = product.toJSON(); // PHẢI có dòng này trước khi xóa
       await product.destroy(); 
       res.json({ message: "Đã xóa sản phẩm tạm thời" });
     } catch (error) {
@@ -772,7 +776,9 @@ const finalBadgeImg     = uploadedBadge?.path || badgeImage || product.badgeImag
       }
 
       await product.restore();
-      res.json({ message: "Đã khôi phục sản phẩm" });
+      const restoredProduct = await Product.findOne({ where: { id } }); // <-- Lấy lại bản ghi mới nhất
+      req.auditNewValue = restoredProduct.toJSON();
+      res.json({ message: "Đã khôi phục sản phẩm", data: restoredProduct });
     } catch (error) {
       res.status(500).json({ message: "Lỗi server", error: error.message });
     }

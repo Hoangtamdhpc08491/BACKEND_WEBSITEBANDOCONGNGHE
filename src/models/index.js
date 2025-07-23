@@ -12,7 +12,7 @@ const FlashSale = require("./flashsale.model");
 const FlashSaleItem = require("./flashsaleitem.model");
 const FlashSaleCategory = require("./flashsalecategory.model");
 //
-const ReturnRequest = require("./returnRequest"); 
+const ReturnRequest = require("./returnRequest");
 
 const ProductHomeSection = require("./productHomeSection");
 const ProductInfo = require("./productinfo.model");
@@ -38,7 +38,7 @@ const Wishlist = require("./wishlistModel");
 
 //
 
-// 
+//
 const SystemSetting = require("./systemsetting");
 
 const Review = require("./reviewModel");
@@ -62,65 +62,72 @@ const Cart = require("./cart");
 const CartItem = require("./cartitem");
 
 const ProductVariant = require("./productvariant");
-const StockLog = require("./StockLog")
+const StockLog = require("./StockLog");
 const Brand = require("./brandModel");
 const Sku = require("./skuModel");
 const ProductMedia = require("./productMediaModel");
 const Product = require("./product");
-const RolePermission = require('./RolePermission')
-const Action = require('./actionModel')
-const Subject = require('./Subject')
+const RolePermission = require("./RolePermission");
+const Action = require("./actionModel");
+const Subject = require("./Subject");
+
+const AuditLog = require("./auditlogModel");
+
+AuditLog.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user",
+});
+
 // phan quyen
 // User - Role
 User.belongsToMany(Role, {
   through: UserRole, // 👈 sửa đây
-  foreignKey: 'userId',
-  otherKey: 'roleId'
+  foreignKey: "userId",
+  otherKey: "roleId",
 });
 
 Role.belongsToMany(User, {
   through: UserRole, // 👈 sửa đây
-  foreignKey: 'roleId',
-  otherKey: 'userId'
+  foreignKey: "roleId",
+  otherKey: "userId",
 });
 
-
-  Role.hasMany(RolePermission, {
-  foreignKey: 'roleId',
-  as: 'rolePermissions'
+Role.hasMany(RolePermission, {
+  foreignKey: "roleId",
+  as: "rolePermissions",
 });
 RolePermission.belongsTo(Role, {
-  foreignKey: 'roleId',
-  as: 'role'
+  foreignKey: "roleId",
+  as: "role",
 });
 Action.hasMany(RolePermission, {
-  foreignKey: 'actionId',
-  as: 'rolePermissions'
+  foreignKey: "actionId",
+  as: "rolePermissions",
 });
 RolePermission.belongsTo(Action, {
-  foreignKey: 'actionId',
-  as: 'action'
+  foreignKey: "actionId",
+  as: "action",
 });
 Subject.hasMany(RolePermission, {
-  foreignKey: 'subjectId',
-  as: 'rolePermissions'
+  foreignKey: "subjectId",
+  as: "rolePermissions",
 });
 RolePermission.belongsTo(Subject, {
-  foreignKey: 'subjectId',
-  as: 'subject'
+  foreignKey: "subjectId",
+  as: "subject",
 });
 //
 
 StockLog.belongsTo(Sku, {
-  foreignKey: 'skuId',
-  as: 'sku'
+  foreignKey: "skuId",
+  as: "sku",
 });
 
 Sku.hasMany(StockLog, {
-  foreignKey: 'skuId',
-  as: 'logs'
+  foreignKey: "skuId",
+  as: "logs",
 });
-StockLog.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+StockLog.belongsTo(User, { foreignKey: "userId", as: "user" });
 //
 NotificationUser.belongsTo(Notification, { foreignKey: "notificationId" });
 NotificationUser.belongsTo(User, { foreignKey: "userId" });
@@ -544,69 +551,64 @@ ReturnRequest.hasOne(RefundRequest, {
   as: "refundRequest",
 });
 
-
-
 module.exports = {
+  Sequelize,
+  connection,
+  Category,
   User,
   Role,
-  Province,
-  Sku,
-  ReturnRequest,
-  RefundRequest,
-
-  ProductQuestion,
-  ProductAnswer,
-
-  Banner,
-  ProductView,
-SystemSetting,
-  WishlistItem,
-  Wishlist,
-  categoryPostModel,
-  Cart,
-  CartItem,
-  ProductMedia,
+  UserToken,
+  UserAddress,
   HighlightedCategoryItem,
-  District,
-  CouponUser,
-  CouponCategory,
-  SearchHistory,
-  Notification,
-  NotificationUser,
-  CouponItem,
   FlashSale,
   FlashSaleItem,
   FlashSaleCategory,
-  UserAddress,
-  Ward,
-  SkuVariantValue,
-  Variant,
-  VariantValue,
-  Brand,
-  HomeSection,
-  HomeSectionBanner,
-  HomeSectionCategory,
-  UserRole,
-  Category,
+  ReturnRequest,
   ProductHomeSection,
   ProductInfo,
   ProductSpec,
+  ProductView,
+  ProductQuestion,
+  ProductAnswer,
+  UserRole,
+  HomeSectionCategory,
+  HomeSection,
+  HomeSectionBanner,
   Post,
-  ProductVariant,
-  Order,
+  categoryPostModel,
   Tags,
   PostTag,
-  OrderItem,
+  Banner,
+  WishlistItem,
+  Wishlist,
+  SystemSetting,
   Review,
   ReviewMedia,
+  Notification,
+  NotificationUser,
+  Order,
+  OrderItem,
   PaymentMethod,
   PaymentTransaction,
+  SearchHistory,
   Coupon,
+  CouponUser,
+  CouponCategory,
+  CouponItem,
+  Cart,
+  CartItem,
+  ProductVariant,
+  StockLog,
+  Brand,
+  Sku,
+  ProductMedia,
   Product,
-  UserToken,
   RolePermission,
   Action,
   Subject,
-  StockLog,
-  sequelize: connection,
+  AuditLog, // <-- Đảm bảo export model này
+  Variant,
+  VariantValue,
+  SkuVariantValue,
+  sequelize: connection, // Thêm dòng này
 };

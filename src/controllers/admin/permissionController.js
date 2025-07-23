@@ -1,4 +1,6 @@
+
 const permissionService = require('../../services/admin/permission.service');
+
 
 class PermissionController {
     async getAllSubject(req, res, next) {
@@ -38,6 +40,7 @@ class PermissionController {
                 data: matrix
             });
         } catch (err) {
+            console.error('Lỗi khi lấy ma trận quyền:', err.message);
             next(err);
         }
     }
@@ -45,7 +48,7 @@ class PermissionController {
     async updatePermission(req, res, next) {
     try {
         const { roleId, subject, action, hasPermission } = req.body;
-
+        console.log('req.body la',req.body)
         if (!roleId || !subject || !action || typeof hasPermission !== 'boolean') {
             return res.status(400).json({
                 success: false,

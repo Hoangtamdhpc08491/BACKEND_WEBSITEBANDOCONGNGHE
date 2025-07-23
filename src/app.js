@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
+
 const clientRoutes = require('./routes/client'); 
 const adminRoutes = require('./routes/admin'); 
 

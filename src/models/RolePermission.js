@@ -1,4 +1,3 @@
-
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 const RolePermission = sequelize.define(
@@ -21,10 +20,10 @@ const RolePermission = sequelize.define(
       allowNull: true,
     },
     description: {
-  type: DataTypes.TEXT,
-  allowNull: true,
-},
-    created_at: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
